@@ -1348,7 +1348,7 @@ impl<W: LayoutElement> Tile<W> {
                     scale: self.scale,
                 };
                 self.background_effect
-                    .render(ctx.as_gles(), params, xray_pos, &mut |elem| {
+                    .render(ctx.as_gles(), None, params, xray_pos, &mut |elem| {
                         push(elem.into())
                     });
             }
