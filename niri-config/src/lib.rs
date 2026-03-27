@@ -837,7 +837,7 @@ mod tests {
                 window-open { off; }
 
                 window-close {
-                    curve "cubic-bezier" 0.05 0.7 0.1 1  
+                    curve "cubic-bezier" 0.05 0.7 0.1 1
                 }
 
                 recent-windows-close {
@@ -1432,17 +1432,25 @@ mod tests {
                 default_column_display: Tabbed,
                 gaps: 8.0,
                 struts: Struts {
-                    left: FloatOrInt(
-                        1.0,
+                    left: Pixels(
+                        FloatOrInt(
+                            1.0,
+                        ),
                     ),
-                    right: FloatOrInt(
-                        2.0,
+                    right: Pixels(
+                        FloatOrInt(
+                            2.0,
+                        ),
                     ),
-                    top: FloatOrInt(
-                        3.0,
+                    top: Pixels(
+                        FloatOrInt(
+                            3.0,
+                        ),
                     ),
-                    bottom: FloatOrInt(
-                        0.0,
+                    bottom: Pixels(
+                        FloatOrInt(
+                            0.0,
+                        ),
                     ),
                 },
                 background_color: Color {

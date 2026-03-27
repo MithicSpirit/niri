@@ -3651,10 +3651,10 @@ fn tabs_with_different_border() {
     let options = Options {
         layout: niri_config::Layout {
             struts: Struts {
-                left: FloatOrInt(0.),
-                right: FloatOrInt(0.),
-                top: FloatOrInt(20000.),
-                bottom: FloatOrInt(0.),
+                left: FloatOrInt(0.).into(),
+                right: FloatOrInt(0.).into(),
+                top: FloatOrInt(20000.).into(),
+                bottom: FloatOrInt(0.).into(),
             },
             ..Default::default()
         },
@@ -3780,10 +3780,10 @@ fn arbitrary_struts() -> impl Strategy<Value = Struts> {
         arbitrary_spacing_neg(),
     )
         .prop_map(|(left, right, top, bottom)| Struts {
-            left: FloatOrInt(left),
-            right: FloatOrInt(right),
-            top: FloatOrInt(top),
-            bottom: FloatOrInt(bottom),
+            left: FloatOrInt(left).into(),
+            right: FloatOrInt(right).into(),
+            top: FloatOrInt(top).into(),
+            bottom: FloatOrInt(bottom).into(),
         })
 }
 

@@ -4,7 +4,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use niri_config::utils::MergeWith as _;
-use niri_config::{CenterFocusedColumn, PresetSize, Struts};
+use niri_config::{CenterFocusedColumn, PresetSize, StrutSize, Struts};
 use niri_ipc::{ColumnDisplay, SizeChange, WindowLayout};
 use ordered_float::NotNan;
 use smithay::backend::renderer::gles::GlesRenderer;
@@ -279,6 +279,14 @@ pub enum ScrollDirection {
 struct MoveAnimation {
     anim: Animation,
     from: f64,
+}
+
+#[derive(Debug)]
+struct StrutsPx {
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
 }
 
 impl<W: LayoutElement> ScrollingSpace<W> {
@@ -5452,6 +5460,23 @@ impl<W: LayoutElement> Column<W> {
     }
 }
 
+impl StrutsPx {
+    fn from_struts(area: Rectangle<f64, Logical>, struts: Struts) -> Self {
+        fn compute(total: f64, size: StrutSize) -> f64 {
+            match size {
+                StrutSize::Pixels(x) => x.0,
+                StrutSize::Proportion(p) => total * p.0,
+            }
+        }
+        Self {
+            left: compute(area.size.w, struts.left),
+            right: compute(area.size.w, struts.right),
+            top: compute(area.size.h, struts.top),
+            bottom: compute(area.size.h, struts.bottom),
+        }
+    }
+}
+
 fn compute_new_view_offset(
     cur_x: f64,
     view_width: f64,
@@ -5491,14 +5516,15 @@ fn compute_working_area(
     scale: f64,
     struts: Struts,
 ) -> Rectangle<f64, Logical> {
+    let struts = StrutsPx::from_struts(parent_area, struts);
     let mut working_area = parent_area;
 
     // Add struts.
-    working_area.size.w = f64::max(0., working_area.size.w - struts.left.0 - struts.right.0);
-    working_area.loc.x += struts.left.0;
+    working_area.size.w = f64::max(0., working_area.size.w - struts.left - struts.right);
+    working_area.loc.x += struts.left;
 
-    working_area.size.h = f64::max(0., working_area.size.h - struts.top.0 - struts.bottom.0);
-    working_area.loc.y += struts.top.0;
+    working_area.size.h = f64::max(0., working_area.size.h - struts.top - struts.bottom);
+    working_area.loc.y += struts.top;
 
     // Round location to start at a physical pixel.
     let loc = working_area
@@ -5573,10 +5599,10 @@ mod tests {
     #[test]
     fn working_area_starts_at_physical_pixel() {
         let struts = Struts {
-            left: FloatOrInt(0.5),
-            right: FloatOrInt(1.),
-            top: FloatOrInt(0.75),
-            bottom: FloatOrInt(1.),
+            left: FloatOrInt(0.5).into(),
+            right: FloatOrInt(1.).into(),
+            top: FloatOrInt(0.75).into(),
+            bottom: FloatOrInt(1.).into(),
         };
 
         let parent_area = Rectangle::from_size(Size::from((1280., 720.)));
@@ -5589,10 +5615,10 @@ mod tests {
     #[test]
     fn large_fractional_strut() {
         let struts = Struts {
-            left: FloatOrInt(0.),
-            right: FloatOrInt(0.),
-            top: FloatOrInt(50000.5),
-            bottom: FloatOrInt(0.),
+            left: FloatOrInt(0.).into(),
+            right: FloatOrInt(0.).into(),
+            top: FloatOrInt(50000.5).into(),
+            bottom: FloatOrInt(0.).into(),
         };
 
         let parent_area = Rectangle::from_size(Size::from((1280., 720.)));

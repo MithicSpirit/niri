@@ -1,10 +1,12 @@
+use std::str::FromStr;
+
 use knuffel::errors::DecodeError;
 use niri_ipc::{ColumnDisplay, SizeChange};
 
 use crate::appearance::{
     Border, FocusRing, InsertHint, Shadow, TabIndicator, DEFAULT_BACKGROUND_COLOR,
 };
-use crate::utils::{expect_only_children, Flag, MergeWith};
+use crate::utils::{expect_only_children, Flag, MergeWith, Percent};
 use crate::{BorderRule, Color, FloatOrInt, InsertHintPart, ShadowRule, TabIndicatorPart};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -146,16 +148,24 @@ impl From<PresetSize> for SizeChange {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DefaultPresetSize(pub Option<PresetSize>);
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum StrutSize {
+    /// Size of strut in logical pixels.
+    Pixels(FloatOrInt<-65535, 65535>),
+    /// Size of strut as a proportion of the size of the working area.
+    Proportion(Percent),
+}
+
 #[derive(knuffel::Decode, Debug, Default, Clone, Copy, PartialEq)]
 pub struct Struts {
     #[knuffel(child, unwrap(argument), default)]
-    pub left: FloatOrInt<-65535, 65535>,
+    pub left: StrutSize,
     #[knuffel(child, unwrap(argument), default)]
-    pub right: FloatOrInt<-65535, 65535>,
+    pub right: StrutSize,
     #[knuffel(child, unwrap(argument), default)]
-    pub top: FloatOrInt<-65535, 65535>,
+    pub top: StrutSize,
     #[knuffel(child, unwrap(argument), default)]
-    pub bottom: FloatOrInt<-65535, 65535>,
+    pub bottom: StrutSize,
 }
 
 #[derive(knuffel::DecodeScalar, Debug, Default, PartialEq, Eq, Clone, Copy)]
@@ -194,5 +204,213 @@ where
         } else {
             Ok(Self(None))
         }
+    }
+}
+
+impl Default for StrutSize {
+    fn default() -> Self {
+        Self::Pixels(FloatOrInt(0.))
+    }
+}
+
+impl From<FloatOrInt<-65535, 65535>> for StrutSize {
+    fn from(value: FloatOrInt<-65535, 65535>) -> Self {
+        Self::Pixels(value)
+    }
+}
+
+impl From<Percent> for StrutSize {
+    fn from(value: Percent) -> Self {
+        Self::Proportion(value)
+    }
+}
+
+impl MergeWith<FloatOrInt<-65535, 65535>> for StrutSize {
+    fn merge_with(&mut self, part: &FloatOrInt<-65535, 65535>) {
+        *self = (*part).into();
+    }
+
+    fn from_part(part: &FloatOrInt<-65535, 65535>) -> Self
+    where
+        Self: Default + Sized,
+    {
+        (*part).into()
+    }
+}
+
+impl MergeWith<Percent> for StrutSize {
+    fn merge_with(&mut self, part: &Percent) {
+        *self = (*part).into();
+    }
+
+    fn from_part(part: &Percent) -> Self
+    where
+        Self: Default + Sized,
+    {
+        (*part).into()
+    }
+}
+
+impl<S: knuffel::traits::ErrorSpan> knuffel::DecodeScalar<S> for StrutSize {
+    fn type_check(
+        type_name: &Option<knuffel::span::Spanned<knuffel::ast::TypeName, S>>,
+        ctx: &mut knuffel::decode::Context<S>,
+    ) {
+        if let Some(type_name) = &type_name {
+            ctx.emit_error(DecodeError::unexpected(
+                type_name,
+                "type name",
+                "no type name expected for this node",
+            ));
+        }
+    }
+
+    fn raw_decode(
+        val: &knuffel::span::Spanned<knuffel::ast::Literal, S>,
+        ctx: &mut knuffel::decode::Context<S>,
+    ) -> Result<Self, DecodeError<S>> {
+        const MIN: i32 = -65535;
+        const MAX: i32 = 65535;
+        match &**val {
+            knuffel::ast::Literal::Int(ref value) => match value.try_into() {
+                Ok(v) => {
+                    if (MIN..=MAX).contains(&v) {
+                        Ok(Self::Pixels(FloatOrInt(f64::from(v))))
+                    } else {
+                        ctx.emit_error(DecodeError::conversion(
+                            val,
+                            format!("value must be between {MIN} and {MAX}"),
+                        ));
+                        Ok(Self::Pixels(FloatOrInt::default()))
+                    }
+                }
+                Err(e) => {
+                    ctx.emit_error(DecodeError::conversion(val, e));
+                    Ok(Self::default())
+                }
+            },
+            knuffel::ast::Literal::Decimal(ref value) => match value.try_into() {
+                Ok(v) => {
+                    if (f64::from(MIN)..=f64::from(MAX)).contains(&v) {
+                        Ok(Self::Pixels(FloatOrInt(v)))
+                    } else {
+                        ctx.emit_error(DecodeError::conversion(
+                            val,
+                            format!("value must be between {MIN} and {MAX}"),
+                        ));
+                        Ok(Self::default())
+                    }
+                }
+                Err(e) => {
+                    ctx.emit_error(DecodeError::conversion(val, e));
+                    Ok(Self::default())
+                }
+            },
+            knuffel::ast::Literal::String(ref value) => match Percent::from_str(value) {
+                Ok(v) => Ok(Self::Proportion(v)),
+                Err(e) => {
+                    ctx.emit_error(DecodeError::conversion(val, e));
+                    Ok(Self::default())
+                }
+            },
+            _ => {
+                ctx.emit_error(DecodeError::unsupported(
+                    val,
+                    "Unsupported value, only numbers and strings are recognized",
+                ));
+                Ok(Self::default())
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use insta::assert_debug_snapshot;
+
+    use super::*;
+
+    #[track_caller]
+    fn do_parse(text: &str) -> Layout {
+        let part = knuffel::parse("test.kdl", text)
+            .map_err(miette::Report::new)
+            .unwrap();
+        Layout::from_part(&part)
+    }
+
+    #[test]
+    fn strut_pixels() {
+        let parsed = do_parse(
+            r#"
+            struts {
+                left 1
+                right 1.2
+                top 1.23
+                bottom 1.234
+            }
+            "#,
+        );
+        assert_debug_snapshot!(parsed.struts, @r"
+        Struts {
+            left: Pixels(
+                FloatOrInt(
+                    1.0,
+                ),
+            ),
+            right: Pixels(
+                FloatOrInt(
+                    1.2,
+                ),
+            ),
+            top: Pixels(
+                FloatOrInt(
+                    1.23,
+                ),
+            ),
+            bottom: Pixels(
+                FloatOrInt(
+                    1.234,
+                ),
+            ),
+        }
+        ")
+    }
+
+    #[test]
+    fn strut_percent() {
+        let parsed = do_parse(
+            r#"
+            struts {
+                left "10%"
+                right "12%"
+                top "12.3%"
+                bottom "12.34%"
+            }
+            "#,
+        );
+        assert_debug_snapshot!(parsed.struts, @r"
+        Struts {
+            left: Proportion(
+                Percent(
+                    0.1,
+                ),
+            ),
+            right: Proportion(
+                Percent(
+                    0.12,
+                ),
+            ),
+            top: Proportion(
+                Percent(
+                    0.12300000000000001,
+                ),
+            ),
+            bottom: Proportion(
+                Percent(
+                    0.1234,
+                ),
+            ),
+        }
+        ")
     }
 }
