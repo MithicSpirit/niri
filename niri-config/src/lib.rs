@@ -936,6 +936,7 @@ mod tests {
 
             layer-rule {
                 match namespace="^notifications$"
+                priority 1
                 block-out-from "screencast"
             }
 
@@ -1967,6 +1968,9 @@ mod tests {
                     ],
                     excludes: [],
                     opacity: None,
+                    priority: Some(
+                        1,
+                    ),
                     block_out_from: Some(
                         Screencast,
                     ),
