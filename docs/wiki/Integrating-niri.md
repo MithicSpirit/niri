@@ -4,14 +4,18 @@ First, for creating a niri package, see the [Packaging](./Packaging-niri.md) pag
 ### Configuration
 
 Niri will load configuration from `$XDG_CONFIG_HOME/niri/config.kdl` or `~/.config/niri/config.kdl`, falling back to `/etc/niri/config.kdl`.
-If both of these files are missing, niri will create `$XDG_CONFIG_HOME/niri/config.kdl` with the contents of [the default configuration file](https://github.com/YaLTeR/niri/blob/main/resources/default-config.kdl), which are embedded into the niri binary at build time.
+If both of these files are missing, niri will create `$XDG_CONFIG_HOME/niri/config.kdl` with the contents of [the default configuration file](https://github.com/niri-wm/niri/blob/main/resources/default-config.kdl), which are embedded into the niri binary at build time.
 
 This means that you can customize your distribution defaults by creating `/etc/niri/config.kdl`.
 When this file is present, niri *will not* automatically create a config at `~/.config/niri/`, so you'll need to direct your users how to do it themselves.
 
 Keep in mind that we update the default config in new releases, so if you have a custom `/etc/niri/config.kdl`, you likely want to inspect and apply the relevant changes too.
 
-You can split the niri config file into multiple files using [`include`](./Configuration:-Include.md).
+The default configuration locations can be overridden with the `NIRI_CONFIG` environment variable.
+
+<sup>Since: 26.04</sup> You can also change the configuration path at runtime via the niri IPC or using the command `niri msg action load-config-file --path <path-to-config.kdl>`.
+
+<sup>Since: 25.11</sup> You can split the niri config file into multiple files using [`include`](./Configuration:-Include.md).
 
 ### Xwayland
 
@@ -32,7 +36,7 @@ Make sure your system installer sets the keyboard layout via systemd-localed, an
 ### Autostart
 
 Niri works with the normal systemd autostart.
-The default [niri.service](https://github.com/YaLTeR/niri/blob/main/resources/niri.service) brings up `graphical-session.target` as well as `xdg-desktop-autostart.target`.
+The default [niri.service](https://github.com/niri-wm/niri/blob/main/resources/niri.service) brings up `graphical-session.target` as well as `xdg-desktop-autostart.target`.
 
 To make a program run at niri startup without editing the niri config, you can either link its .desktop to `~/.config/autostart/`, or use a .service file with `WantedBy=graphical-session.target`.
 See the [example systemd setup](./Example-systemd-Setup.md) page for some examples.
@@ -59,3 +63,7 @@ Alternatively, some desktop environments and shells work with niri, and can give
 - Many [XFCE](https://www.xfce.org/) components work on Wayland, including niri. See [their wiki](https://wiki.xfce.org/releng/wayland_roadmap#component_specific_status) for details.
 - There are complete desktop shells based on Quickshell that support niri, for example [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) and [Noctalia](https://github.com/noctalia-dev/noctalia-shell).
 - You can run a [COSMIC](https://system76.com/cosmic/) session with niri using [cosmic-ext-extra-sessions](https://github.com/Drakulix/cosmic-ext-extra-sessions).
+
+### Security model
+
+See the [Security Model](./Security-Model.md) page for an overview of niri's security model.

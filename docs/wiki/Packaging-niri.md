@@ -24,7 +24,7 @@ To do that, put files into the correct directories according to this table.
 | `resources/niri.service` (systemd) | `/usr/lib/systemd/user/` |
 | `resources/niri-shutdown.target` (systemd) | `/usr/lib/systemd/user/` |
 | `resources/dinit/niri` (dinit) | `/usr/lib/dinit.d/user/` |
-| `resources/dinit/niri-shutdown` (dinit) | `/usr/lib/dinit.d/user/` |
+| `resources/dinit/niri.target` (dinit) | `/usr/lib/dinit.d/user/` |
 
 Doing this will make niri appear in GDM and other display managers.
 
@@ -47,7 +47,7 @@ Set them as automatically-installed optional dependencies, if possible.
 Working hardware acceleration is required for running niri.
 - Some notification daemon like `mako`, generally required for apps to work correctly.
 
-Finally, you may want to auto-install some of the applications bound in niri's [default configuration file](https://github.com/YaLTeR/niri/blob/main/resources/default-config.kdl) (search for `spawn`), such as `alacritty` and `fuzzel`.
+Finally, you may want to auto-install some of the applications bound in niri's [default configuration file](https://github.com/niri-wm/niri/blob/main/resources/default-config.kdl) (search for `spawn`), such as `alacritty` and `fuzzel`.
 
 ### Running tests
 
