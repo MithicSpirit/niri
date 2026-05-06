@@ -2994,7 +2994,10 @@ impl State {
                 }
 
                 if !is_overview_open && self.niri.layout.activate_window(&window) {
-                    return;
+                    let config = self.niri.config.borrow();
+                    if config.input.only_focus_on_click {
+                        return;
+                    }
                 }
 
                 // FIXME: granular.

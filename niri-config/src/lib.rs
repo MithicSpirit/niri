@@ -733,6 +733,7 @@ mod tests {
 
                 warp-mouse-to-focus
                 focus-follows-mouse
+                only-focus-on-click
                 workspace-auto-back-and-forth
 
                 mod-key "Mod5"
@@ -857,7 +858,7 @@ mod tests {
                 window-open { off; }
 
                 window-close {
-                    curve "cubic-bezier" 0.05 0.7 0.1 1  
+                    curve "cubic-bezier" 0.05 0.7 0.1 1
                 }
 
                 recent-windows-close {
@@ -1135,6 +1136,7 @@ mod tests {
                         max_scroll_amount: None,
                     },
                 ),
+                only_focus_on_click: true,
                 workspace_auto_back_and_forth: true,
                 mod_key: Some(
                     IsoLevel3Shift,
