@@ -1219,7 +1219,11 @@ impl LayoutElement for Mapped {
     }
 
     fn requested_size(&self) -> Option<Size<i32, Logical>> {
-        self.toplevel().with_pending_state(|state| state.size)
+        if self.rules.ignore_client_size {
+            None
+        } else {
+            self.toplevel().with_pending_state(|state| state.size)
+        }
     }
 
     fn expected_size(&self) -> Option<Size<i32, Logical>> {
