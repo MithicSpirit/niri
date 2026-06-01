@@ -1853,6 +1853,7 @@ mod tests {
                     min_height: None,
                     max_width: None,
                     max_height: None,
+                    ignore_client_size: None,
                     focus_ring: BorderRule {
                         off: true,
                         on: false,
