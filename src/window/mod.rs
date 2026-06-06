@@ -396,10 +396,20 @@ impl ResolvedWindowRules {
             let current = guard.current();
             (current.min_size, current.max_size)
         });
-        let (min_size, max_size) = self.apply_min_max_size(min_size, max_size);
+
+        let (min_height, max_height) = if self.ignore_client_size {
+            if let (Some(min_height), Some(max_height)) = (self.min_height, self.max_height) {
+                (min_height.into(), max_height.into())
+            } else {
+                (min_size.h, max_size.h)
+            }
+        } else {
+            let (min_size, max_size) = self.apply_min_max_size(min_size, max_size);
+            (min_size.h, max_size.h)
+        };
 
         // We open fixed-height windows as floating.
-        min_size.h > 0 && min_size.h == max_size.h
+        min_height > 0 && min_height == max_height
     }
 }
 
