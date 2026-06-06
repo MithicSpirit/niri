@@ -1898,6 +1898,8 @@ mod tests {
                             saturation: None,
                         },
                     },
+                    force_render: None,
+                    force_render_fps: None,
                 },
             ],
             layer_rules: [
