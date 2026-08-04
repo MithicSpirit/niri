@@ -44,6 +44,8 @@ pub struct WindowRule {
     pub max_width: Option<u16>,
     #[knuffel(child, unwrap(argument))]
     pub max_height: Option<u16>,
+    #[knuffel(child, unwrap(argument))]
+    pub ignore_client_size: Option<bool>,
 
     #[knuffel(child, default)]
     pub focus_ring: BorderRule,
@@ -137,6 +139,8 @@ pub struct Match {
     pub is_urgent: Option<bool>,
     #[knuffel(property)]
     pub at_startup: Option<bool>,
+    #[knuffel(property, str)]
+    pub xdg_tag: Option<RegexEq>,
 }
 
 #[derive(knuffel::Decode, Debug, Clone, Copy, PartialEq)]

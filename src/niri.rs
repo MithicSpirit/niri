@@ -111,6 +111,7 @@ use smithay::wayland::viewporter::ViewporterState;
 use smithay::wayland::virtual_keyboard::VirtualKeyboardManagerState;
 use smithay::wayland::xdg_activation::XdgActivationState;
 use smithay::wayland::xdg_foreign::XdgForeignState;
+use smithay::wayland::xdg_toplevel_tag::XdgToplevelTagManager;
 use wayland_server::protocol::wl_output::WlOutput;
 
 #[cfg(feature = "dbus")]
@@ -312,6 +313,7 @@ pub struct Niri {
     pub gamma_control_manager_state: GammaControlManagerState,
     pub activation_state: XdgActivationState,
     pub mutter_x11_interop_state: MutterX11InteropManagerState,
+    pub xdg_toplevel_tag_manager: XdgToplevelTagManager,
 
     // This will not work as is outside of tests, so it is gated with #[cfg(test)] for now. In
     // particular, shaders will need to learn about the single pixel buffer. Also, it must be
@@ -2376,6 +2378,7 @@ impl Niri {
 
         let mutter_x11_interop_state =
             MutterX11InteropManagerState::new::<State, _>(&display_handle, move |_| true);
+        let xdg_toplevel_tag_manager = XdgToplevelTagManager::new::<State>(&display_handle);
 
         #[cfg(test)]
         let single_pixel_buffer_state = SinglePixelBufferState::new::<State>(&display_handle);
@@ -2571,6 +2574,7 @@ impl Niri {
             gamma_control_manager_state,
             activation_state,
             mutter_x11_interop_state,
+            xdg_toplevel_tag_manager,
             #[cfg(test)]
             single_pixel_buffer_state,
 
@@ -4006,6 +4010,11 @@ impl Niri {
     pub fn refresh_idle_inhibit(&mut self) {
         let _span = tracy_client::span!("Niri::refresh_idle_inhibit");
 
+        if self.config.borrow().prevent_idle_inhibit {
+            self.idle_notifier_state.set_is_inhibited(false);
+            return;
+        }
+
         self.idle_inhibiting_surfaces.retain(|s| s.is_alive());
 
         let is_inhibited = self.is_fdo_idle_inhibited.load(Ordering::SeqCst)
@@ -4540,16 +4549,21 @@ impl Niri {
         for_backdrop: bool,
     ) -> impl Iterator<Item = (&'a MappedLayer, Rectangle<i32, Logical>)> {
         // LayerMap returns layers in reverse stacking order.
-        layer_map.layers_on(layer).rev().filter_map(move |surface| {
-            let mapped = self.mapped_layer_surfaces.get(surface)?;
+        let mut layers = layer_map
+            .layers_on(layer)
+            .filter_map(move |surface| {
+                let mapped = self.mapped_layer_surfaces.get(surface)?;
 
-            if for_backdrop != mapped.place_within_backdrop() {
-                return None;
-            }
+                if for_backdrop != mapped.place_within_backdrop() {
+                    return None;
+                }
 
-            let geo = layer_map.layer_geometry(surface)?;
-            Some((mapped, geo))
-        })
+                let geo = layer_map.layer_geometry(surface)?;
+                Some((mapped, geo))
+            })
+            .collect::<Vec<_>>();
+        layers.sort_by_key(|(mapped, _)| mapped.rules().priority);
+        layers.into_iter().rev()
     }
 
     #[allow(clippy::too_many_arguments)]

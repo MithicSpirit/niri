@@ -1563,8 +1563,33 @@ impl State {
                 // FIXME: granular
                 self.niri.queue_redraw_all();
             }
+            Action::ConsumeWindowIntoColumnLeft => {
+                self.niri.layout.consume_into_column_left();
+                // This does not cause immediate focus or window size change, so warping mouse to
+                // focus won't do anything here.
+                // FIXME: granular
+                self.niri.queue_redraw_all();
+            }
             Action::ExpelWindowFromColumn => {
                 self.niri.layout.expel_from_column();
+                self.maybe_warp_cursor_to_focus();
+                // FIXME: granular
+                self.niri.queue_redraw_all();
+            }
+            Action::ExpelWindowFromColumnLeft => {
+                self.niri.layout.expel_from_column_left();
+                self.maybe_warp_cursor_to_focus();
+                // FIXME: granular
+                self.niri.queue_redraw_all();
+            }
+            Action::ExpelFocusedWindowFromColumn => {
+                self.niri.layout.expel_focused_from_column();
+                self.maybe_warp_cursor_to_focus();
+                // FIXME: granular
+                self.niri.queue_redraw_all();
+            }
+            Action::ExpelFocusedWindowFromColumnLeft => {
+                self.niri.layout.expel_focused_from_column_left();
                 self.maybe_warp_cursor_to_focus();
                 // FIXME: granular
                 self.niri.queue_redraw_all();
@@ -2993,8 +3018,11 @@ impl State {
                     }
                 }
 
-                if !is_overview_open {
-                    self.niri.layout.activate_window(&window);
+                if !is_overview_open && self.niri.layout.activate_window(&window) {
+                    let config = self.niri.config.borrow();
+                    if config.input.only_focus_on_click {
+                        return;
+                    }
                 }
 
                 // FIXME: granular.

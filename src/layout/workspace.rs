@@ -787,6 +787,10 @@ impl<W: LayoutElement> Workspace<W> {
         Some(column)
     }
 
+    pub fn resolve_default_full_width(&self, full_width: Option<bool>) -> bool {
+        full_width.unwrap_or(self.options.layout.default_column_width.maximize)
+    }
+
     pub fn resolve_default_width(
         &self,
         default_width: Option<Option<PresetSize>>,
@@ -796,8 +800,12 @@ impl<W: LayoutElement> Workspace<W> {
             Some(Some(width)) => Some(width),
             Some(None) => None,
             None if is_floating => None,
-            None => self.options.layout.default_column_width,
+            None => self.options.layout.default_column_width.size,
         }
+    }
+
+    pub fn get_default_maximize(&self) -> bool {
+        self.options.layout.default_column_width.maximize
     }
 
     pub fn resolve_default_height(
@@ -1118,14 +1126,44 @@ impl<W: LayoutElement> Workspace<W> {
         if self.floating_is_active.get() {
             return;
         }
-        self.scrolling.consume_into_column();
+        self.scrolling.consume_into_column(ScrollDirection::Right);
+    }
+
+    pub fn consume_into_column_left(&mut self) {
+        if self.floating_is_active.get() {
+            return;
+        }
+        self.scrolling.consume_into_column(ScrollDirection::Left);
     }
 
     pub fn expel_from_column(&mut self) {
         if self.floating_is_active.get() {
             return;
         }
-        self.scrolling.expel_from_column();
+        self.scrolling.expel_from_column(ScrollDirection::Right);
+    }
+
+    pub fn expel_from_column_left(&mut self) {
+        if self.floating_is_active.get() {
+            return;
+        }
+        self.scrolling.expel_from_column(ScrollDirection::Left);
+    }
+
+    pub fn expel_focused_from_column(&mut self) {
+        if self.floating_is_active.get() {
+            return;
+        }
+        self.scrolling
+            .expel_focused_from_column(ScrollDirection::Right);
+    }
+
+    pub fn expel_focused_from_column_left(&mut self) {
+        if self.floating_is_active.get() {
+            return;
+        }
+        self.scrolling
+            .expel_focused_from_column(ScrollDirection::Left);
     }
 
     pub fn swap_window_in_direction(&mut self, direction: ScrollDirection) {

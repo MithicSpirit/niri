@@ -1511,10 +1511,10 @@ impl<W: LayoutElement> Layout<W> {
         ws_idx == mon.active_workspace_idx
     }
 
-    pub fn activate_window(&mut self, window: &W::Id) {
+    pub fn activate_window(&mut self, window: &W::Id) -> bool {
         if let Some(InteractiveMoveState::Moving(move_)) = &self.interactive_move {
             if move_.tile.window().id() == window {
-                return;
+                return false;
             }
         }
 
@@ -1524,11 +1524,12 @@ impl<W: LayoutElement> Layout<W> {
             ..
         } = &mut self.monitor_set
         else {
-            return;
+            return false;
         };
 
         for (monitor_idx, mon) in monitors.iter_mut().enumerate() {
             for (workspace_idx, ws) in mon.workspaces.iter_mut().enumerate() {
+                let ret = !ws.active_window().is_some_and(|w| w.id() == window);
                 if ws.activate_window(window) {
                     *active_monitor_idx = monitor_idx;
 
@@ -1541,10 +1542,11 @@ impl<W: LayoutElement> Layout<W> {
                         _ => mon.switch_workspace(workspace_idx),
                     }
 
-                    return;
+                    return ret;
                 }
             }
         }
+        false
     }
 
     pub fn activate_window_without_raising(&mut self, window: &W::Id) {
@@ -2211,11 +2213,39 @@ impl<W: LayoutElement> Layout<W> {
         workspace.consume_into_column();
     }
 
+    pub fn consume_into_column_left(&mut self) {
+        let Some(workspace) = self.active_workspace_mut() else {
+            return;
+        };
+        workspace.consume_into_column_left();
+    }
+
     pub fn expel_from_column(&mut self) {
         let Some(workspace) = self.active_workspace_mut() else {
             return;
         };
         workspace.expel_from_column();
+    }
+
+    pub fn expel_from_column_left(&mut self) {
+        let Some(workspace) = self.active_workspace_mut() else {
+            return;
+        };
+        workspace.expel_from_column_left();
+    }
+
+    pub fn expel_focused_from_column(&mut self) {
+        let Some(workspace) = self.active_workspace_mut() else {
+            return;
+        };
+        workspace.expel_focused_from_column();
+    }
+
+    pub fn expel_focused_from_column_left(&mut self) {
+        let Some(workspace) = self.active_workspace_mut() else {
+            return;
+        };
+        workspace.expel_focused_from_column_left();
     }
 
     pub fn swap_window_in_direction(&mut self, direction: ScrollDirection) {

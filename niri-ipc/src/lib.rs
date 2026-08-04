@@ -440,8 +440,16 @@ pub enum Action {
     },
     /// Consume the window to the right into the focused column.
     ConsumeWindowIntoColumn {},
-    /// Expel the bottom window from the focused column.
+    /// Consume the window to the right into the focused column.
+    ConsumeWindowIntoColumnLeft {},
+    /// Expel the bottom window from the focused column to the right.
     ExpelWindowFromColumn {},
+    /// Expel the bottom window from the focused column to the left.
+    ExpelWindowFromColumnLeft {},
+    /// Expel the focused window from the focused column to the right.
+    ExpelFocusedWindowFromColumn {},
+    /// Expel the focused window from the focused column to the left.
+    ExpelFocusedWindowFromColumnLeft {},
     /// Swap focused window with one to the right.
     SwapWindowRight {},
     /// Swap focused window with one to the left.
@@ -1368,6 +1376,8 @@ pub struct Window {
     ///
     /// The timestamp comes from the monotonic clock.
     pub focus_timestamp: Option<Timestamp>,
+    /// xdg-toplevel-tag tag and description, if set.
+    pub xdg_tag: (Option<String>, Option<String>),
 }
 
 /// A moment in time.

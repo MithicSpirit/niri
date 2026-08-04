@@ -74,6 +74,7 @@ pub struct Config {
     pub spawn_sh_at_startup: Vec<SpawnShAtStartup>,
     pub layout: Layout,
     pub prefer_no_csd: bool,
+    pub prevent_idle_inhibit: bool,
     pub cursor: Cursor,
     pub screenshot_path: ScreenshotPath,
     pub clipboard: Clipboard,
@@ -236,6 +237,10 @@ where
 
                 "prefer-no-csd" => {
                     config.borrow_mut().prefer_no_csd = Flag::decode_node(node, ctx)?.0
+                }
+
+                "prevent-idle-inhibit" => {
+                    config.borrow_mut().prevent_idle_inhibit = Flag::decode_node(node, ctx)?.0
                 }
 
                 "screenshot-path" => {
@@ -733,6 +738,7 @@ mod tests {
 
                 warp-mouse-to-focus
                 focus-follows-mouse
+                only-focus-on-click
                 workspace-auto-back-and-forth
 
                 mod-key "Mod5"
@@ -801,7 +807,7 @@ mod tests {
                     fixed 1280
                 }
 
-                default-column-width { proportion 0.25; }
+                default-column-width maximize=true { proportion 0.25; }
 
                 gaps 8
 
@@ -825,6 +831,7 @@ mod tests {
             spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
 
             prefer-no-csd
+            prevent-idle-inhibit
 
             cursor {
                 xcursor-theme "breeze_cursors"
@@ -909,6 +916,7 @@ mod tests {
 
             layer-rule {
                 match namespace="^notifications$"
+                priority 1
                 block-out-from "screencast"
             }
 
@@ -1136,6 +1144,7 @@ mod tests {
                         max_scroll_amount: None,
                     },
                 ),
+                only_focus_on_click: true,
                 workspace_auto_back_and_forth: true,
                 mod_key: Some(
                     IsoLevel3Shift,
@@ -1437,11 +1446,14 @@ mod tests {
                         1280,
                     ),
                 ],
-                default_column_width: Some(
-                    Proportion(
-                        0.25,
+                default_column_width: DefaultColumnWidth {
+                    size: Some(
+                        Proportion(
+                            0.25,
+                        ),
                     ),
-                ),
+                    maximize: true,
+                },
                 preset_window_heights: [
                     Proportion(
                         0.25,
@@ -1483,6 +1495,7 @@ mod tests {
                 },
             },
             prefer_no_csd: true,
+            prevent_idle_inhibit: true,
             cursor: Cursor {
                 xcursor_theme: "breeze_cursors",
                 xcursor_size: 16,
@@ -1737,6 +1750,7 @@ mod tests {
                             is_window_cast_target: None,
                             is_urgent: None,
                             at_startup: None,
+                            xdg_tag: None,
                         },
                     ],
                     excludes: [
@@ -1756,6 +1770,7 @@ mod tests {
                             is_window_cast_target: None,
                             is_urgent: None,
                             at_startup: None,
+                            xdg_tag: None,
                         },
                         Match {
                             app_id: None,
@@ -1771,6 +1786,7 @@ mod tests {
                             is_window_cast_target: None,
                             is_urgent: None,
                             at_startup: None,
+                            xdg_tag: None,
                         },
                     ],
                     default_column_width: None,
@@ -1804,6 +1820,7 @@ mod tests {
                     min_height: None,
                     max_width: None,
                     max_height: None,
+                    ignore_client_size: None,
                     focus_ring: BorderRule {
                         off: true,
                         on: false,
@@ -1917,6 +1934,9 @@ mod tests {
                     ],
                     excludes: [],
                     opacity: None,
+                    priority: Some(
+                        1,
+                    ),
                     block_out_from: Some(
                         Screencast,
                     ),
