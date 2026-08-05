@@ -179,9 +179,9 @@ use crate::utils::vblank_throttle::VBlankThrottle;
 use crate::utils::watcher::Watcher;
 use crate::utils::xwayland::satellite::Satellite;
 use crate::utils::{
-    center, center_f64, expand_home, get_monotonic_time, ipc_transform_to_smithay, is_mapped,
-    logical_output, make_screenshot_path, output_matches_name, output_size, panel_orientation,
-    send_scale_transform, write_png_rgba8, xwayland,
+    center, center_f64, expand_home, frequency_to_period, get_monotonic_time,
+    ipc_transform_to_smithay, is_mapped, logical_output, make_screenshot_path, output_matches_name,
+    output_size, panel_orientation, send_scale_transform, write_png_rgba8, xwayland,
 };
 use crate::window::mapped::MappedId;
 use crate::window::{InitialConfigureState, Mapped, ResolvedWindowRules, Unmapped, WindowRef};
@@ -573,6 +573,11 @@ struct SurfaceFrameThrottlingState {
     last_sent_at: RefCell<Option<(Output, u32)>>,
 }
 
+struct SurfaceForceRenderState {
+    /// Whether a forced render is scheduled in the event loop.
+    scheduled: RefCell<bool>,
+}
+
 pub enum CenterCoords {
     Separately,
     Both,
@@ -663,6 +668,68 @@ impl Default for SurfaceFrameThrottlingState {
             last_sent_at: RefCell::new(None),
         }
     }
+}
+impl Default for SurfaceForceRenderState {
+    fn default() -> Self {
+        Self {
+            scheduled: RefCell::new(false),
+        }
+    }
+}
+
+fn force_render_callback(state: &mut State, mapped_id: MappedId) -> TimeoutAction {
+    let Some(mapped) = state
+        .niri
+        .layout
+        .windows_mut()
+        .find(|m| m.id() == mapped_id)
+    else {
+        return TimeoutAction::Drop;
+    };
+
+    let Some(period) = with_states(mapped.toplevel().wl_surface(), |states| {
+        let Some(rate) = mapped.force_render() else {
+            let force_render_state = states
+                .data_map
+                .get_or_insert(SurfaceForceRenderState::default);
+            let mut scheduled = force_render_state.scheduled.borrow_mut();
+
+            *scheduled = false;
+            return None;
+        };
+
+        let frame_throttling_state = states
+            .data_map
+            .get_or_insert(SurfaceFrameThrottlingState::default);
+        let last_sent_at = frame_throttling_state.last_sent_at.borrow();
+
+        let output_rate = last_sent_at
+            .as_ref()
+            .and_then(|(output, _)| output.current_mode())
+            .map(|mode| mode.refresh)
+            .unwrap_or(0);
+
+        let period = std::cmp::max(frequency_to_period(rate), frequency_to_period(output_rate));
+        Some(period)
+    }) else {
+        return TimeoutAction::Drop;
+    };
+
+    let output = &Output::new(
+        String::new(),
+        PhysicalProperties {
+            size: Size::from((0, 0)),
+            subpixel: Subpixel::Unknown,
+            make: String::new(),
+            model: String::new(),
+            serial_number: String::new(),
+        },
+    );
+    let frame_callback_time = get_monotonic_time();
+
+    mapped.send_frame(output, frame_callback_time, Some(period), |_, _| None);
+
+    TimeoutAction::ToDuration(period)
 }
 
 impl KeyboardFocus {
@@ -5097,7 +5164,12 @@ impl Niri {
 
         let frame_callback_time = get_monotonic_time();
 
+        // Borrow checker decided to be annoying here.
+        let mut to_force_render = Vec::new();
         for mapped in self.layout.windows_for_output_mut(output) {
+            if mapped.force_render().is_some() {
+                to_force_render.push(mapped.id());
+            }
             mapped.send_frame(
                 output,
                 frame_callback_time,
@@ -5105,6 +5177,9 @@ impl Niri {
                 should_send,
             );
         }
+        to_force_render
+            .drain(..)
+            .for_each(|x| self.setup_force_render(x));
 
         for surface in layer_map_for_output(output).layers() {
             surface.send_frame(
@@ -5213,6 +5288,36 @@ impl Niri {
                 |_, _| None,
             );
         }
+    }
+
+    fn setup_force_render(&mut self, mapped_id: MappedId) {
+        let Some(mapped) = self
+            .layout
+            .windows()
+            .find(|(_, m)| m.id() == mapped_id)
+            .map(|(_, m)| m)
+        else {
+            return;
+        };
+        with_states(mapped.toplevel().wl_surface(), |states| {
+            let force_render_state = states
+                .data_map
+                .get_or_insert(SurfaceForceRenderState::default);
+            let mut scheduled = force_render_state.scheduled.borrow_mut();
+            if *scheduled {
+                return;
+            }
+            *scheduled = true;
+
+            let res = self
+                .event_loop
+                .insert_source(Timer::immediate(), move |_, _, state| {
+                    force_render_callback(state, mapped_id)
+                });
+            if let Err(e) = res {
+                warn!("error scheduling forced render: {e}")
+            };
+        })
     }
 
     pub fn take_presentation_feedbacks(
