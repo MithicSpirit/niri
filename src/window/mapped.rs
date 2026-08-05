@@ -611,6 +611,16 @@ impl Mapped {
     pub fn is_urgent(&self) -> bool {
         self.is_urgent
     }
+
+    /// The forced rendering rate if enabled (either due to the window rule or
+    /// due to being a cast target), or `None` if disabled.
+    pub fn force_render(&self) -> Option<i32> {
+        if self.is_window_cast_target || self.rules.force_render == Some(true) {
+            Some(self.rules.force_render_fps.unwrap_or(0) as i32 * 1000)
+        } else {
+            None
+        }
+    }
 }
 
 impl Drop for Mapped {
