@@ -4996,43 +4996,6 @@ impl<W: LayoutElement> Layout<W> {
         moving_window.chain(rest)
     }
 
-    pub fn windows_mut(&mut self) -> impl Iterator<Item = &mut W> {
-        let iter_normal;
-        let iter_no_outputs;
-
-        match &mut self.monitor_set {
-            MonitorSet::Normal { monitors, .. } => {
-                let it = monitors
-                    .iter_mut()
-                    .flat_map(|mon| mon.workspaces.iter_mut());
-
-                iter_normal = Some(it);
-                iter_no_outputs = None;
-            }
-            MonitorSet::NoOutputs { workspaces } => {
-                let it = workspaces.iter_mut();
-
-                iter_normal = None;
-                iter_no_outputs = Some(it);
-            }
-        }
-
-        let iter_normal = iter_normal.into_iter().flatten();
-        let iter_no_outputs = iter_no_outputs.into_iter().flatten();
-        let workspace_windows = iter_normal
-            .chain(iter_no_outputs)
-            .flat_map(|ws| ws.windows_mut());
-
-        let moving_window = self
-            .interactive_move
-            .as_mut()
-            .and_then(|x| x.moving_mut())
-            .map(|move_| move_.tile.window_mut())
-            .into_iter();
-
-        workspace_windows.chain(moving_window)
-    }
-
     pub fn has_window(&self, window: &W::Id) -> bool {
         self.windows().any(|(_, win)| win.id() == window)
     }
