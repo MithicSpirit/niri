@@ -678,11 +678,19 @@ impl Default for SurfaceForceRenderState {
 }
 
 fn force_render_callback(state: &mut State, mapped_id: MappedId) -> TimeoutAction {
-    let Some(mapped) = state
+    let Some((output_rate, mapped)) = state
         .niri
         .layout
-        .windows_mut()
-        .find(|m| m.id() == mapped_id)
+        .workspaces_mut()
+        .flat_map(|ws| {
+            let rate = ws
+                .current_output()
+                .and_then(|out| out.current_mode())
+                .map(|mode| mode.refresh)
+                .unwrap_or(0);
+            ws.windows_mut().map(move |win| (rate, win))
+        })
+        .find(|(_, win)| win.id() == mapped_id)
     else {
         return TimeoutAction::Drop;
     };
@@ -698,18 +706,10 @@ fn force_render_callback(state: &mut State, mapped_id: MappedId) -> TimeoutActio
             return None;
         };
 
-        let frame_throttling_state = states
-            .data_map
-            .get_or_insert(SurfaceFrameThrottlingState::default);
-        let last_sent_at = frame_throttling_state.last_sent_at.borrow();
-
-        let output_rate = last_sent_at
-            .as_ref()
-            .and_then(|(output, _)| output.current_mode())
-            .map(|mode| mode.refresh)
-            .unwrap_or(0);
-
-        let period = std::cmp::max(frequency_to_period(rate), frequency_to_period(output_rate));
+        let period = std::cmp::max(
+            frequency_to_period(rate),
+            frequency_to_period(output_rate as u32),
+        );
         Some(period)
     }) else {
         return TimeoutAction::Drop;

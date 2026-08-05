@@ -612,11 +612,13 @@ impl Mapped {
         self.is_urgent
     }
 
-    /// The forced rendering rate if enabled (either due to the window rule or
-    /// due to being a cast target), or `None` if disabled.
-    pub fn force_render(&self) -> Option<i32> {
-        if self.is_window_cast_target || self.rules.force_render == Some(true) {
-            Some(self.rules.force_render_fps.unwrap_or(0) as i32 * 1000)
+    /// The forced rendering frame rate in millihertz if enabled (either due to
+    /// the window rule or due to being a cast target), or `None` if disabled.
+    pub fn force_render(&self) -> Option<u32> {
+        if self.is_window_cast_target {
+            Some(0) // use last output's refresh rate
+        } else if self.rules.force_render == Some(true) {
+            Some(self.rules.force_render_fps.unwrap_or(0) as u32 * 1000)
         } else {
             None
         }

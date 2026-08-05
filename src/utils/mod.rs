@@ -165,8 +165,8 @@ pub fn get_monotonic_time() -> Duration {
 }
 
 /// Converts a frequency in millihertz to the corresponding period, clamping to
-/// `Duration::ZERO` for negative values and `Duration::MAX` on overflow.
-pub fn frequency_to_period(rate: i32) -> Duration {
+/// `Duration::ZERO` for nonpositive rates and `Duration::MAX` on overflow.
+pub fn frequency_to_period(rate: u32) -> Duration {
     if rate > 0 {
         Duration::try_from_secs_f64(1000.0 / rate as f64).unwrap_or(Duration::MAX)
     } else {
