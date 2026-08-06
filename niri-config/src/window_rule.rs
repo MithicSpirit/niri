@@ -80,9 +80,7 @@ pub struct WindowRule {
     #[knuffel(child, unwrap(argument))]
     pub tiled_state: Option<bool>,
     #[knuffel(child, unwrap(argument))]
-    pub force_render: Option<bool>,
-    #[knuffel(child, unwrap(argument))]
-    pub force_render_fps: Option<u16>,
+    pub force_render: Option<u16>,
     #[knuffel(child, default)]
     pub background_effect: BackgroundEffectRule,
     #[knuffel(child, default)]
