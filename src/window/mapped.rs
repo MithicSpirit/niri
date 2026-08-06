@@ -617,10 +617,8 @@ impl Mapped {
     pub fn force_render(&self) -> Option<u32> {
         if self.is_window_cast_target {
             Some(0) // use last output's refresh rate
-        } else if self.rules.force_render == Some(true) {
-            Some(self.rules.force_render_fps.unwrap_or(0) as u32 * 1000)
         } else {
-            None
+            self.rules.force_render.map(|fps| fps as u32 * 1000)
         }
     }
 }

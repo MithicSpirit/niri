@@ -1883,7 +1883,6 @@ mod tests {
                     scroll_factor: None,
                     tiled_state: None,
                     force_render: None,
-                    force_render_fps: None,
                     background_effect: BackgroundEffectRule {
                         xray: None,
                         blur: None,
