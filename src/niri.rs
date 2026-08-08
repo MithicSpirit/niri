@@ -571,7 +571,7 @@ struct SurfaceFrameThrottlingState {
 
 struct SurfaceForceRenderState {
     /// Whether a forced render is scheduled in the event loop.
-    scheduled: RefCell<bool>,
+    scheduled: Cell<bool>,
 }
 
 pub enum CenterCoords {
@@ -668,7 +668,35 @@ impl Default for SurfaceFrameThrottlingState {
 impl Default for SurfaceForceRenderState {
     fn default() -> Self {
         Self {
-            scheduled: RefCell::new(false),
+            scheduled: Cell::new(false),
+        }
+    }
+}
+
+pub fn setup_force_render(event_loop: &mut LoopHandle<'static, State>, mapped: &Mapped) -> bool {
+    if mapped.force_render().is_none() {
+        return false;
+    }
+
+    let already_scheduled = with_states(mapped.toplevel().wl_surface(), |states| {
+        let force_render_state = states
+            .data_map
+            .get_or_insert(SurfaceForceRenderState::default);
+        force_render_state.scheduled.replace(true)
+    });
+    if already_scheduled {
+        return false;
+    }
+
+    let mapped_id = mapped.id();
+    let res = event_loop.insert_source(Timer::immediate(), move |_, _, state| {
+        force_render_callback(state, mapped_id)
+    });
+    match res {
+        Ok(_) => true,
+        Err(e) => {
+            warn!("error scheduling forced render: {e}");
+            false
         }
     }
 }
@@ -696,9 +724,7 @@ fn force_render_callback(state: &mut State, mapped_id: MappedId) -> TimeoutActio
             let force_render_state = states
                 .data_map
                 .get_or_insert(SurfaceForceRenderState::default);
-            let mut scheduled = force_render_state.scheduled.borrow_mut();
-
-            *scheduled = false;
+            force_render_state.scheduled.set(false);
             return None;
         };
 
@@ -5133,12 +5159,8 @@ impl Niri {
 
         let frame_callback_time = get_monotonic_time();
 
-        // Borrow checker decided to be annoying here.
-        let mut to_force_render = Vec::new();
         for mapped in self.layout.windows_for_output_mut(output) {
-            if mapped.force_render().is_some() {
-                to_force_render.push(mapped.id());
-            }
+            setup_force_render(&mut self.event_loop, mapped);
             mapped.send_frame(
                 output,
                 frame_callback_time,
@@ -5146,9 +5168,6 @@ impl Niri {
                 should_send,
             );
         }
-        to_force_render
-            .drain(..)
-            .for_each(|x| self.setup_force_render(x));
 
         for surface in layer_map_for_output(output).layers() {
             surface.send_frame(
@@ -5257,36 +5276,6 @@ impl Niri {
                 |_, _| None,
             );
         }
-    }
-
-    fn setup_force_render(&mut self, mapped_id: MappedId) {
-        let Some(mapped) = self
-            .layout
-            .windows()
-            .find(|(_, m)| m.id() == mapped_id)
-            .map(|(_, m)| m)
-        else {
-            return;
-        };
-        with_states(mapped.toplevel().wl_surface(), |states| {
-            let force_render_state = states
-                .data_map
-                .get_or_insert(SurfaceForceRenderState::default);
-            let mut scheduled = force_render_state.scheduled.borrow_mut();
-            if *scheduled {
-                return;
-            }
-            *scheduled = true;
-
-            let res = self
-                .event_loop
-                .insert_source(Timer::immediate(), move |_, _, state| {
-                    force_render_callback(state, mapped_id)
-                });
-            if let Err(e) = res {
-                warn!("error scheduling forced render: {e}")
-            };
-        })
     }
 
     pub fn take_presentation_feedbacks(

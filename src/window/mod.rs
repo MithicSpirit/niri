@@ -120,7 +120,7 @@ pub struct ResolvedWindowRules {
     /// Override whether to set the Tiled xdg-toplevel state on the window.
     pub tiled_state: Option<bool>,
 
-    /// Whether to force renders on this window.
+    /// What FPS to force renders for this window.
     pub force_render: Option<u16>,
 
     /// Background effect configuration.
