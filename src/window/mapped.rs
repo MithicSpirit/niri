@@ -196,7 +196,7 @@ pub struct Mapped {
     /// Most recent monotonic time when the window had the focus.
     focus_timestamp: Option<Duration>,
 
-    /// XdgToplevelTag tag and description
+    /// Data for xdg-toplevel-tag-v1.
     xdg_tag: XdgToplevelTag,
 }
 
