@@ -197,7 +197,7 @@ impl<'a> WindowRef<'a> {
                     Some(tag.as_ref().into())
                 })
             }
-            WindowRef::Mapped(mapped) => mapped.xdg_toplevel_tag().0.map(|tag| tag.into()),
+            WindowRef::Mapped(mapped) => mapped.xdg_toplevel_tag().tag.clone(),
         }
     }
 }
