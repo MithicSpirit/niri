@@ -423,17 +423,27 @@ impl Mapped {
         self.need_to_recompute_rules = true;
     }
 
-    pub fn set_xdg_toplevel_tag(&mut self, tag: Box<str>) {
-        if Some(&tag) != self.xdg_tag.tag.as_ref() {
-            self.xdg_tag.tag = Some(tag);
-            self.need_to_recompute_rules = true;
+    pub fn set_xdg_toplevel_tag(&mut self, tag: &str) {
+        if let Some(cur) = &self.xdg_tag.tag {
+            if tag == cur.as_ref() {
+                return;
+            }
         }
+
+        self.xdg_tag.tag = Some(tag.into());
+        self.need_to_recompute_rules = true;
     }
 
-    pub fn set_xdg_toplevel_tag_description(&mut self, description: Box<str>) {
-        if Some(&description) != self.xdg_tag.description.as_ref() {
-            self.xdg_tag.description = Some(description);
+    pub fn set_xdg_toplevel_tag_description(&mut self, description: &str) {
+        if let Some(cur) = &self.xdg_tag.description {
+            if description == cur.as_ref() {
+                return;
+            }
         }
+
+        self.xdg_tag.description = Some(description.into());
+        // Don't recompute rules because they can only match on the tag and not
+        // on the description.
     }
 
     pub fn xdg_toplevel_tag(&self) -> &XdgToplevelTag {

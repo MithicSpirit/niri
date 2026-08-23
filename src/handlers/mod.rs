@@ -860,7 +860,7 @@ impl XdgToplevelTagHandler for State {
         else {
             return;
         };
-        mapped.set_xdg_toplevel_tag(tag.into_boxed_str());
+        mapped.set_xdg_toplevel_tag(tag.as_str());
     }
 
     fn set_description(&mut self, toplevel: XdgToplevel, description: String) {
@@ -874,7 +874,7 @@ impl XdgToplevelTagHandler for State {
         else {
             return;
         };
-        mapped.set_xdg_toplevel_tag_description(description.into_boxed_str());
+        mapped.set_xdg_toplevel_tag_description(description.as_str());
     }
 }
 
