@@ -424,10 +424,8 @@ impl Mapped {
     }
 
     pub fn set_xdg_toplevel_tag(&mut self, tag: &str) {
-        if let Some(cur) = &self.xdg_tag.tag {
-            if tag == cur.as_ref() {
-                return;
-            }
+        if Some(tag) == self.xdg_tag.tag.as_deref() {
+            return;
         }
 
         self.xdg_tag.tag = Some(tag.into());
@@ -435,10 +433,8 @@ impl Mapped {
     }
 
     pub fn set_xdg_toplevel_tag_description(&mut self, description: &str) {
-        if let Some(cur) = &self.xdg_tag.description {
-            if description == cur.as_ref() {
-                return;
-            }
+        if Some(description) == self.xdg_tag.description.as_deref() {
+            return;
         }
 
         self.xdg_tag.description = Some(description.into());
