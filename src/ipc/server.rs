@@ -521,12 +521,7 @@ fn make_ipc_window(
         id: mapped.id().get(),
         title: role.title.clone(),
         app_id: role.app_id.clone(),
-        xdg_tag: {
-            let (tag, desc) = mapped.xdg_toplevel_tag();
-            let tag = tag.map(|x| x.into());
-            let desc = desc.map(|x| x.into());
-            (tag, desc)
-        },
+        xdg_tag: mapped.xdg_toplevel_tag().clone(),
         pid: mapped.credentials().map(|c| c.pid),
         workspace_id: workspace_id.map(|id| id.get()),
         is_focused: mapped.is_focused(),

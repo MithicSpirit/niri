@@ -9,6 +9,7 @@ use niri_ipc::socket::Socket;
 use niri_ipc::{
     Action, Cast, CastKind, CastTarget, Event, KeyboardLayouts, LogicalOutput, Mode, Output,
     OutputConfigChanged, Overview, Request, Response, Transform, Window, WindowLayout,
+    XdgToplevelTag,
 };
 use serde_json::json;
 
@@ -692,10 +693,22 @@ fn print_window(window: &Window) {
     }
 
     match &window.xdg_tag {
-        (Some(tag), Some(description)) => println!("  XDG Tag: {description} [{tag}]"),
-        (None, Some(description)) => println!("  XDG Tag: {description}"),
-        (Some(tag), None) => println!("  XDG Tag: [{tag}]"),
-        (None, None) => println!("  XDG Tag: (unset)"),
+        XdgToplevelTag {
+            tag: Some(tag),
+            description: Some(desc),
+        } => println!("  XDG Tag: {desc} [{tag}]"),
+        XdgToplevelTag {
+            tag: None,
+            description: Some(desc),
+        } => println!("  XDG Tag: {desc}"),
+        XdgToplevelTag {
+            tag: Some(tag),
+            description: None,
+        } => println!("  XDG Tag: [{tag}]"),
+        XdgToplevelTag {
+            tag: None,
+            description: None,
+        } => println!("  XDG Tag: (unset)"),
     }
 
     println!(

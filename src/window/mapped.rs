@@ -2,6 +2,7 @@ use std::cell::{Cell, Ref, RefCell};
 use std::time::Duration;
 
 use niri_config::{Color, Config, CornerRadius, GradientInterpolation, WindowRule};
+use niri_ipc::XdgToplevelTag;
 use smithay::backend::renderer::element::surface::WaylandSurfaceRenderElement;
 use smithay::backend::renderer::element::Kind;
 use smithay::backend::renderer::gles::GlesRenderer;
@@ -196,7 +197,7 @@ pub struct Mapped {
     focus_timestamp: Option<Duration>,
 
     /// XdgToplevelTag tag and description
-    xdg_toplevel_tag: (Option<Box<str>>, Option<Box<str>>),
+    xdg_tag: XdgToplevelTag,
 }
 
 niri_render_elements! {
@@ -279,15 +280,15 @@ impl Mapped {
     pub fn new(window: Window, rules: ResolvedWindowRules, hook: HookId, config: &Config) -> Self {
         let surface = window.wl_surface().expect("no X11 support");
         let credentials = get_credentials_for_surface(&surface);
-        let xdg_toplevel_tag = with_states(
+        let xdg_tag = with_states(
             window.toplevel().expect("no X11 support").wl_surface(),
             |states| {
                 let Some(tag_data) = states.data_map.get::<XdgToplevelTagSurfaceData>() else {
-                    return (None, None);
+                    return XdgToplevelTag::default();
                 };
                 let tag = tag_data.tag().map(|tag| tag.as_ref().into());
-                let desc = tag_data.description().map(|desc| desc.as_ref().into());
-                (tag, desc)
+                let description = tag_data.description().map(|desc| desc.as_ref().into());
+                XdgToplevelTag { tag, description }
             },
         );
         let mut rv = Self {
@@ -323,7 +324,7 @@ impl Mapped {
             is_pending_maximized: false,
             uncommitted_maximized: Vec::new(),
             focus_timestamp: None,
-            xdg_toplevel_tag,
+            xdg_tag,
         };
 
         rv.is_maximized = rv.sizing_mode().is_maximized();
@@ -422,26 +423,21 @@ impl Mapped {
         self.need_to_recompute_rules = true;
     }
 
-    pub fn set_xdg_toplevel_tag(&mut self, tag: Option<Box<str>>, description: Option<Box<str>>) {
-        if let Some(tag) = tag {
-            if Some(&tag) != self.xdg_toplevel_tag.0.as_ref() {
-                self.xdg_toplevel_tag.0 = Some(tag);
-                self.need_to_recompute_rules = true;
-            }
-        }
-
-        if let Some(description) = description {
-            if Some(&description) != self.xdg_toplevel_tag.1.as_ref() {
-                self.xdg_toplevel_tag.0 = Some(description);
-            }
+    pub fn set_xdg_toplevel_tag(&mut self, tag: Box<str>) {
+        if Some(&tag) != self.xdg_tag.tag.as_ref() {
+            self.xdg_tag.tag = Some(tag);
+            self.need_to_recompute_rules = true;
         }
     }
 
-    pub fn xdg_toplevel_tag(&self) -> (Option<&str>, Option<&str>) {
-        let (tag, desc) = &self.xdg_toplevel_tag;
-        let tag = tag.as_ref().map(|tag| tag.as_ref());
-        let desc = desc.as_ref().map(|desc| desc.as_ref());
-        (tag, desc)
+    pub fn set_xdg_toplevel_tag_description(&mut self, description: Box<str>) {
+        if Some(&description) != self.xdg_tag.description.as_ref() {
+            self.xdg_tag.description = Some(description);
+        }
+    }
+
+    pub fn xdg_toplevel_tag(&self) -> &XdgToplevelTag {
+        &self.xdg_tag
     }
 
     /// Renders a snapshot of the window without popups.
