@@ -767,6 +767,11 @@ impl State {
             Action::PowerOnMonitors => {
                 self.niri.activate_monitors(&mut self.backend);
             }
+            Action::ForceIdle(duration) => {
+                self.niri
+                    .idle_notifier_state
+                    .force_idle_all(Duration::from_secs(duration));
+            }
             Action::ToggleDebugTint => {
                 self.backend.toggle_debug_tint();
                 self.niri.queue_redraw_all();
@@ -4911,6 +4916,7 @@ fn allowed_when_locked(action: &Action) -> bool {
             | Action::Suspend
             | Action::PowerOffMonitors
             | Action::PowerOnMonitors
+            | Action::ForceIdle(_)
             | Action::SwitchLayout(_)
             | Action::ToggleKeyboardShortcutsInhibit
             | Action::ToggleTouchpad
@@ -4926,6 +4932,7 @@ fn allowed_during_screenshot(action: &Action) -> bool {
             | Action::PowerOffMonitors
             | Action::PowerOnMonitors
             | Action::ToggleTouchpad
+            | Action::ForceIdle(_)
             // Intended for binds such as volume up/down, lock the screen, etc.
             | Action::Spawn(_)
             | Action::SpawnSh(_)
