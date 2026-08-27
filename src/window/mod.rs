@@ -13,7 +13,6 @@ use smithay::wayland::compositor::with_states;
 use smithay::wayland::shell::xdg::{
     SurfaceCachedState, ToplevelSurface, XdgToplevelSurfaceRoleAttributes,
 };
-use smithay::wayland::xdg_toplevel_tag::XdgToplevelTagSurfaceData;
 
 use crate::utils::with_toplevel_role;
 
@@ -190,13 +189,7 @@ impl<'a> WindowRef<'a> {
 
     pub fn xdg_toplevel_tag(&self) -> Option<Box<str>> {
         match self {
-            WindowRef::Unmapped(unmapped) => {
-                with_states(unmapped.toplevel().wl_surface(), |states| {
-                    let tag_data = states.data_map.get::<XdgToplevelTagSurfaceData>()?;
-                    let tag = tag_data.tag()?;
-                    Some(tag.as_ref().into())
-                })
-            }
+            WindowRef::Unmapped(_) => None,
             WindowRef::Mapped(mapped) => mapped.xdg_toplevel_tag().tag.clone(),
         }
     }
