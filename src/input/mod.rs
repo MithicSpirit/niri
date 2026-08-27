@@ -728,6 +728,11 @@ impl State {
             Action::PowerOnMonitors => {
                 self.niri.activate_monitors(&mut self.backend);
             }
+            Action::ForceIdle(duration) => {
+                self.niri
+                    .idle_notifier_state
+                    .force_idle_all(Duration::from_secs(duration));
+            }
             Action::ToggleDebugTint => {
                 self.backend.toggle_debug_tint();
                 self.niri.queue_redraw_all();
