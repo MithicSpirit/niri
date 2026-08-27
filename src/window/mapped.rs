@@ -280,17 +280,14 @@ impl Mapped {
     pub fn new(window: Window, rules: ResolvedWindowRules, hook: HookId, config: &Config) -> Self {
         let surface = window.wl_surface().expect("no X11 support");
         let credentials = get_credentials_for_surface(&surface);
-        let xdg_tag = with_states(
-            window.toplevel().expect("no X11 support").wl_surface(),
-            |states| {
-                let Some(tag_data) = states.data_map.get::<XdgToplevelTagSurfaceData>() else {
-                    return XdgToplevelTag::default();
-                };
-                let tag = tag_data.tag().map(|tag| tag.as_ref().into());
-                let description = tag_data.description().map(|desc| desc.as_ref().into());
-                XdgToplevelTag { tag, description }
-            },
-        );
+        let xdg_tag = with_states(&surface, |states| {
+            let Some(tag_data) = states.data_map.get::<XdgToplevelTagSurfaceData>() else {
+                return XdgToplevelTag::default();
+            };
+            let tag = tag_data.tag().map(|tag| tag.as_ref().into());
+            let description = tag_data.description().map(|desc| desc.as_ref().into());
+            XdgToplevelTag { tag, description }
+        });
         let mut rv = Self {
             window,
             id: MappedId::next(),
