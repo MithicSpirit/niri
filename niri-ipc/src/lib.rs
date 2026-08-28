@@ -205,7 +205,7 @@ pub enum Action {
     /// Set the idle timer, ignoring inhibitors.
     ForceIdle {
         /// Idle duration in seconds.
-        #[cfg_attr(feature = "clap", arg(last = true, default_value_t = 0))]
+        #[cfg_attr(feature = "clap", arg(default_value_t = 0))]
         duration: u64,
     },
     /// Spawn a command.
