@@ -11,10 +11,9 @@ use smithay::reexports::wayland_protocols::xdg::shell::server::xdg_toplevel;
 use smithay::utils::{Logical, Size};
 use smithay::wayland::compositor::with_states;
 use smithay::wayland::shell::xdg::{
-    SurfaceCachedState, ToplevelSurface, XdgToplevelSurfaceRoleAttributes,
+    SurfaceCachedState, ToplevelSurface, XdgToplevelSurfaceData, XdgToplevelSurfaceRoleAttributes,
 };
-
-use crate::utils::with_toplevel_role;
+use smithay::wayland::xdg_toplevel_tag::XdgToplevelTagSurfaceData;
 
 pub mod mapped;
 pub use mapped::Mapped;
@@ -186,13 +185,6 @@ impl<'a> WindowRef<'a> {
             WindowRef::Mapped(mapped) => mapped.is_window_cast_target(),
         }
     }
-
-    pub fn xdg_toplevel_tag(&self) -> Option<Box<str>> {
-        match self {
-            WindowRef::Unmapped(_) => None,
-            WindowRef::Mapped(mapped) => mapped.xdg_toplevel_tag().tag.clone(),
-        }
-    }
 }
 
 impl ResolvedWindowRules {
@@ -201,7 +193,20 @@ impl ResolvedWindowRules {
 
         let mut resolved = ResolvedWindowRules::default();
 
-        with_toplevel_role(window.toplevel(), |role| {
+        with_states(window.toplevel().wl_surface(), |states| {
+            let role = &mut states
+                .data_map
+                .get::<XdgToplevelSurfaceData>()
+                .unwrap()
+                .lock()
+                .unwrap();
+
+            let xdg_tag = states
+                .data_map
+                .get::<XdgToplevelTagSurfaceData>()
+                .and_then(|data| data.tag());
+            let xdg_tag = xdg_tag.as_deref();
+
             // Ensure server_pending like in Smithay's with_pending_state().
             if role.server_pending.is_none() {
                 role.server_pending = Some(role.current_server_state().clone());
@@ -218,7 +223,7 @@ impl ResolvedWindowRules {
                         }
                     }
 
-                    window_matches(window, role, m)
+                    window_matches(window, role, xdg_tag, m)
                 };
 
                 if !(rule.matches.is_empty() || rule.matches.iter().any(matches)) {
@@ -433,7 +438,12 @@ impl ResolvedWindowRules {
     }
 }
 
-fn window_matches(window: WindowRef, role: &XdgToplevelSurfaceRoleAttributes, m: &Match) -> bool {
+fn window_matches(
+    window: WindowRef,
+    role: &XdgToplevelSurfaceRoleAttributes,
+    xdg_tag: Option<&str>,
+    m: &Match,
+) -> bool {
     // Must be ensured by the caller.
     let server_pending = role.server_pending.as_ref().unwrap();
 
@@ -478,7 +488,7 @@ fn window_matches(window: WindowRef, role: &XdgToplevelSurfaceRoleAttributes, m:
     }
 
     if let Some(tag_re) = &m.xdg_tag {
-        let Some(tag) = &window.xdg_toplevel_tag() else {
+        let Some(tag) = xdg_tag else {
             return false;
         };
         if !tag_re.0.is_match(tag) {
