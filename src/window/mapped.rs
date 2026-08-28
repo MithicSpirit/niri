@@ -2,7 +2,6 @@ use std::cell::{Cell, Ref, RefCell};
 use std::time::Duration;
 
 use niri_config::{Color, Config, CornerRadius, GradientInterpolation, WindowRule};
-use niri_ipc::XdgToplevelTag;
 use smithay::backend::renderer::element::surface::WaylandSurfaceRenderElement;
 use smithay::backend::renderer::element::Kind;
 use smithay::backend::renderer::gles::GlesRenderer;
@@ -20,7 +19,6 @@ use smithay::wayland::shell::xdg::{
     SurfaceCachedState, ToplevelCachedState, ToplevelConfigure, ToplevelSurface,
     XdgToplevelSurfaceData,
 };
-use smithay::wayland::xdg_toplevel_tag::XdgToplevelTagSurfaceData;
 use wayland_backend::server::Credentials;
 
 use super::{ResolvedWindowRules, WindowRef};
@@ -195,9 +193,6 @@ pub struct Mapped {
 
     /// Most recent monotonic time when the window had the focus.
     focus_timestamp: Option<Duration>,
-
-    /// Data for xdg-toplevel-tag-v1.
-    xdg_tag: XdgToplevelTag,
 }
 
 niri_render_elements! {
@@ -280,14 +275,6 @@ impl Mapped {
     pub fn new(window: Window, rules: ResolvedWindowRules, hook: HookId, config: &Config) -> Self {
         let surface = window.wl_surface().expect("no X11 support");
         let credentials = get_credentials_for_surface(&surface);
-        let xdg_tag = with_states(&surface, |states| {
-            let Some(tag_data) = states.data_map.get::<XdgToplevelTagSurfaceData>() else {
-                return XdgToplevelTag::default();
-            };
-            let tag = tag_data.tag().map(|tag| tag.as_ref().into());
-            let description = tag_data.description().map(|desc| desc.as_ref().into());
-            XdgToplevelTag { tag, description }
-        });
         let mut rv = Self {
             window,
             id: MappedId::next(),
@@ -321,7 +308,6 @@ impl Mapped {
             is_pending_maximized: false,
             uncommitted_maximized: Vec::new(),
             focus_timestamp: None,
-            xdg_tag,
         };
 
         rv.is_maximized = rv.sizing_mode().is_maximized();
@@ -418,29 +404,6 @@ impl Mapped {
 
         self.is_window_cast_target = value;
         self.need_to_recompute_rules = true;
-    }
-
-    pub fn set_xdg_toplevel_tag(&mut self, tag: &str) {
-        if Some(tag) == self.xdg_tag.tag.as_deref() {
-            return;
-        }
-
-        self.xdg_tag.tag = Some(tag.into());
-        self.need_to_recompute_rules = true;
-    }
-
-    pub fn set_xdg_toplevel_tag_description(&mut self, description: &str) {
-        if Some(description) == self.xdg_tag.description.as_deref() {
-            return;
-        }
-
-        self.xdg_tag.description = Some(description.into());
-        // Don't recompute rules because they can only match on the tag and not
-        // on the description.
-    }
-
-    pub fn xdg_toplevel_tag(&self) -> &XdgToplevelTag {
-        &self.xdg_tag
     }
 
     /// Renders a snapshot of the window without popups.

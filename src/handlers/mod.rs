@@ -837,33 +837,13 @@ impl XdgActivationHandler for State {
 }
 
 impl XdgToplevelTagHandler for State {
-    fn set_tag(&mut self, toplevel: XdgToplevel, tag: String) {
+    fn set_tag(&mut self, toplevel: XdgToplevel, _tag: String) {
         let Some(toplevel) = self.niri.xdg_shell_state.get_toplevel(&toplevel) else {
             return;
         };
-        let Some((mapped, _)) = self
-            .niri
-            .layout
-            .find_window_and_output_mut(toplevel.wl_surface())
-        else {
-            return;
-        };
-        mapped.set_xdg_toplevel_tag(tag.as_str());
+        self.update_window_rules(&toplevel);
     }
-
-    fn set_description(&mut self, toplevel: XdgToplevel, description: String) {
-        let Some(toplevel) = self.niri.xdg_shell_state.get_toplevel(&toplevel) else {
-            return;
-        };
-        let Some((mapped, _)) = self
-            .niri
-            .layout
-            .find_window_and_output_mut(toplevel.wl_surface())
-        else {
-            return;
-        };
-        mapped.set_xdg_toplevel_tag_description(description.as_str());
-    }
+    // no set_description because window rules only match on the tag
 }
 
 impl FractionalScaleHandler for State {}
